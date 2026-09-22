@@ -35,7 +35,7 @@ export const projectSchema = z.object({
   schemaVersion: z.literal(1), id, name: z.string().min(1).max(255),
   artist: z.string().max(255).optional(), audioAssetId: id.optional(),
   assets: z.array(assetSchema), lyrics: z.array(lyricLineSchema),
-  scenes: z.array(sceneSchema), aspectRatios: z.array(z.enum(['16:9', '9:16', '1:1'])).min(1),
+  scenes: z.array(sceneSchema), aspectRatios: z.array(z.enum(['16:9', '9:16', '3:4', '1:1', '1:2', '2:1', '2:3', '3:2', '20:9', '21:9', '4:5', '4:3'])).min(1),
   styleId: id.optional(), revision: ms
 }).strict().superRefine((project, ctx) => {
   const assetIds = new Set<string>();

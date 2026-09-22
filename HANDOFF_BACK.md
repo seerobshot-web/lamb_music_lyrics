@@ -1,33 +1,34 @@
-﻿# HANDOFF_BACK — M0 Portable Foundation
+﻿# HANDOFF_BACK — M1 Local Project Intake and Persistence
 
-## Scope and source
-Branch: `m0/portable-foundation-20260921`; base: `main` at `c3ad5da6184e7e39d3554dc6429838b304e1af33`.
-Existing GitHub root React/Vite application is canonical; the separate local pnpm scaffold was **not** copied or used to replace the UI.
+## Baseline and scope
+M0 PR #1 was squash merged into main at c67ffe4925e226c0fac0e31111983fabd37ddd41.
+This branch is M1 only. Existing player/editor/rendering paths are retained. No audio
+transcription, new rendering engines, provider integration, deployment, or M2 work.
 
-## Implemented
-- Strict, versioned Zod project contracts for lyrics, word timing, portable assets, scenes and project metadata.
-- Non-destructive legacy lyric import/export adapters converting seconds to integer milliseconds, with explicit rejection of session-only blob-backed visual slides until media relinking.
-- File descriptor allowlisting, relative path validation, origin/session authorization helpers; real file signatures and runtime isolation are deferred.
-- Versioned worker operation, capability, job state and error schemas. **No worker listener or execution exists in M0.**
-- Removed Vite build-time shared Gemini API key injection. Existing AI actions without an explicitly user-supplied credential now fail with an explicit error; a secure server-backed AI adapter remains a later milestone.
-- Added npm scripts, scoped ESLint, Vitest contracts/security tests and GitHub Actions checks.
-- Existing `App.tsx`, `types.ts`, editor components, and video-rendering implementations were not rewritten.
+## Implementation
+- Save Project / Open Project actions are integrated in the existing player controls. Opening a stored project prompts before replacing an active unsaved session.
+- Browser IndexedDB holds a single explicit user-saved session including original audio bytes,
+  lyric text/timing, captured blob/data media, legacy visual slide settings, render configuration,
+  metadata and lyric offset. No external upload occurs.
+- M0 project schema validates a portable asset/scene/lyric manifest. Blob/object URLs
+  are generated only when reopening, never stored as persistent asset references.
+- Missing or externally hosted visual media causes an explicit save error rather than
+  silently creating a broken archive.
+- Restore replaces the active session and its playlist item without changing existing renderers.
+- Save is explicit, not autosave. Replacing an existing stored session is intentional and
+  only follows successful validation and media capture.
+
+## Limits and next steps
+- Storage is confined to this browser and origin, not an exportable archive or cloud backup.
+  Browser storage clearing, quota limits, and private browsing can remove projects.
+- One saved active session per browser; full project library, portable archive import/export,
+  and persistent song collections require a separate approved follow-up.
+- Custom font blobs, arbitrary remote assets, playlist collections, and every legacy
+  background configuration are not universally portable; do not advertise a full
+  no-loss migration until further UI/browser test coverage confirms it.
+- Existing HTML media- and IDB-dependent flows require manual browser playback/restore QA.
+- Retain the current app's browser renderer and styling; no deployment/merge/M2.
 
 ## Validation
-Baseline `npm ci --ignore-scripts`, `npx tsc --noEmit`, and `npm run build`: passed.
-After M0: `npm run check` — typecheck, scoped M0 lint, 7 unit tests, and production build passed locally.
-Caveat: ESLint covers **new M0 packages/tests only**. Legacy source linting and browser visual QA remain separate work.
-The original build and updated build warn about a large JavaScript chunk and outdated Browserslist data.
-GitHub Actions status: check the draft pull request after push; local success is not a claim of passing CI.
-
-## Open M0/implementation caveats
-- No persisted project store or automated UI migration was introduced. The schema/adapter is a foundation only.
-- No real worker exists; origin/session contract helpers are not substitutes for a tested HTTP server boundary.
-- Actual media magic-byte checks, symlink containment, quotas, and per-operation permission enforcement require the future worker.
-- Existing browser Gemini workflows must use a user-provided key or wait for an authenticated server adapter; do not reintroduce a deployment-wide secret into Vite.
-- Current npm lockfile was regenerated to add Zod, ESLint, TypeScript ESLint, and Vitest; verify lockfile integrity in CI.
-- No media processing, AI visuals, Remotion integration, deployment, merge or M1 work was performed.
-
-## Next
-Review the draft M0 PR, inspect CI status, resolve any failures, and approve merge separately. Do not begin M1 automatically.
+Local npm run check passed: typecheck, M0/M1-scoped lint, 12 unit tests (including an IndexedDB save/reopen test), and the Vite production build. Existing large-bundle, Browserslist and Rollup/Zod annotation warnings remain. See draft PR for remote CI and outstanding browser QA.
 

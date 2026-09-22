@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+﻿import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   Play, Pause, SkipBack, SkipForward, Volume2, VolumeX,
   Maximize, Minimize, Upload, Music, FileText, Settings, ImageIcon,
@@ -20,6 +20,7 @@ import { useUI } from './contexts/UIContext';
 import { renderWithFFmpeg, renderPlaylistWithFFmpeg, isFFmpegAvailable, getFFmpegCodecs } from './utils/ffmpegRenderer';
 import { renderWithWebCodecs, renderPlaylistWithWebCodecs, isWebCodecsSupported } from './utils/webCodecsRenderer';
 import { extractEmbeddedLyrics } from './utils/embeddedLyrics';
+import { saveSession, loadSession } from './packages/project-engine';
 
 
 
@@ -236,7 +237,7 @@ function App() {
     }));
   }, [lyrics, lyricOffset]);
 
-  // Detect unsynced lyrics (all timestamps are 0 — e.g. embedded USLT without timing)
+  // Detect unsynced lyrics (all timestamps are 0 Ã¢â‚¬â€ e.g. embedded USLT without timing)
   const isUnsyncedLyrics = useMemo(() => {
     if (adjustedLyrics.length === 0) return false;
     return adjustedLyrics.every(l => l.time === 0 && (l.endTime === undefined || l.endTime === 0));
@@ -250,6 +251,48 @@ function App() {
     return currentTime >= line.time && (!nextLine || currentTime < nextLine.time);
   });
 
+  const handleSaveProject = async () => {
+    if (!currentAudioFile || isRendering) { toast.error('Load an audio file before saving a project.'); return; }
+    try {
+      await saveSession({ audio: currentAudioFile, metadata, lyrics, slides: visualSlides,
+        config: renderConfig, lyricOffset, aspectRatio });
+      toast.success('Project saved locally on this device.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Project save failed.');
+    }
+  };
+  const handleOpenProject = async () => {
+    if (isRendering) return;
+    if ((currentAudioFile || lyrics.length || visualSlides.length) &&
+        !(await confirm('Opening the saved project replaces your current unsaved session.', 'Open saved project?'))) return;
+    try {
+      const session = await loadSession();
+      if (!session) { toast.error('No saved local project was found.'); return; }
+      const original = session.audio;
+      const audioName = session.project.assets.find(a => a.id === session.project.audioAssetId)?.name || 'song';
+      const file = new File([original], audioName, { type: original.type });
+      if (audioSrc?.startsWith('blob:')) URL.revokeObjectURL(audioSrc);
+      const nextUrl = URL.createObjectURL(file);
+      setIsPlaying(false);
+      setCurrentTime(0);
+      setAudioSrc(nextUrl);
+      setCurrentAudioFile(file);
+      setMetadata(session.metadata);
+      setLyrics(session.lyrics);
+      setVisualSlides(session.slides);
+      setRenderConfig(session.config);
+      setAspectRatio(session.project.aspectRatios[0]);
+      setLyricOffset(session.lyricOffset);
+      setIsBgVideoReady(false);
+      setPlaylist([{ id: session.project.id, audioFile: file, parsedLyrics: session.lyrics,
+        metadata: session.metadata, duration: 0 }]);
+      setCurrentTrackIndex(0);
+      setAudioElementKey(prev => prev + 1);
+      toast.success('Saved project restored. Review playback and visual assets.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Project restore failed.');
+    }
+  };
   // --- Handlers ---
 
   const handleAudioUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -301,7 +344,7 @@ function App() {
         });
       };
 
-      // jsmediatags parsing — also handle files with no MIME type (e.g. .flac, .ogg)
+      // jsmediatags parsing Ã¢â‚¬â€ also handle files with no MIME type (e.g. .flac, .ogg)
       if (!file.type.startsWith('video/')) {
         // @ts-ignore
         import('jsmediatags/dist/jsmediatags.min.js').then((jsmediatags) => {
@@ -329,7 +372,7 @@ function App() {
                 item.id === newItemId ? { ...item, metadata: newMetadata } : item
               ));
 
-              const lyricsTag = tag.tags.lyrics || tag.tags.LYRICS || tag.tags.USLT || tag.tags.SYLT || tag.tags.unsyncedlyrics || tag.tags.SYNCEDLYRICS || tag.tags['©lyr'];
+              const lyricsTag = tag.tags.lyrics || tag.tags.LYRICS || tag.tags.USLT || tag.tags.SYLT || tag.tags.unsyncedlyrics || tag.tags.SYNCEDLYRICS || tag.tags['Ã‚Â©lyr'];
               let embeddedLyrics = '';
               if (lyricsTag) {
                 if (typeof lyricsTag === 'string') {
@@ -343,7 +386,7 @@ function App() {
               if (embeddedLyrics) {
                 applyEmbeddedLyrics(embeddedLyrics);
               } else {
-                // jsmediatags succeeded but found no lyrics — try custom binary extractor
+                // jsmediatags succeeded but found no lyrics Ã¢â‚¬â€ try custom binary extractor
                 // (e.g. FLAC: jsmediatags parses Vorbis Comments but skips the LYRICS field)
                 extractEmbeddedLyrics(file).then(result => {
                   if (result.lyrics) applyEmbeddedLyrics(result.lyrics);
@@ -1033,7 +1076,7 @@ function App() {
     source.disconnect(); // Disconnect anything previous to guarantee clean slate
     source.connect(mixerDest);
 
-    // Create analyser for visualization in export (tap the source → analyser → destination)
+    // Create analyser for visualization in export (tap the source Ã¢â€ â€™ analyser Ã¢â€ â€™ destination)
     let exportAnalyser: AnalyserNode | null = null;
     let exportFreqBuf: Uint8Array | null = null;
     let exportWaveBuf: Uint8Array | null = null;
@@ -3417,7 +3460,7 @@ function App() {
                 }
 
                 // Fix spacing around hyphens for display (e.g. "Eh- eh" -> "Eh-eh")
-                textContent = textContent.replace(/\s*([-‐‑‒–—―])\s*/g, '$1');
+                textContent = textContent.replace(/\s*([-Ã¢â‚¬ÂÃ¢â‚¬â€˜Ã¢â‚¬â€™Ã¢â‚¬â€œÃ¢â‚¬â€Ã¢â‚¬â€¢])\s*/g, '$1');
 
                 // Apply Typewriter effect if active
                 if (isActive && renderConfig.textAnimation === 'typewriter') {
@@ -3456,8 +3499,8 @@ function App() {
                         const isWordActive = currentTime >= wStart && currentTime < wEnd;
                         const isWordPast = currentTime >= wEnd;
 
-                        const hyphenEndRegex = /[-‐‑‒–—―]$/;
-                        const hyphenStartRegex = /^[-‐‑‒–—―]/;
+                        const hyphenEndRegex = /[-Ã¢â‚¬ÂÃ¢â‚¬â€˜Ã¢â‚¬â€™Ã¢â‚¬â€œÃ¢â‚¬â€Ã¢â‚¬â€¢]$/;
+                        const hyphenStartRegex = /^[-Ã¢â‚¬ÂÃ¢â‚¬â€˜Ã¢â‚¬â€™Ã¢â‚¬â€œÃ¢â‚¬â€Ã¢â‚¬â€¢]/;
 
                         let shouldAddSpace = !wText.endsWith(' ');
 
@@ -3919,6 +3962,12 @@ function App() {
                     )}
                   </div>
 
+                  <button type="button" onClick={handleSaveProject} disabled={!currentAudioFile || isRendering}
+                    className="px-2 py-1 rounded-lg text-xs bg-zinc-800 text-zinc-200 hover:bg-zinc-700 disabled:opacity-40"
+                    title="Save song, lyrics and current project media to local browser storage">Save Project</button>
+                  <button type="button" onClick={handleOpenProject} disabled={isRendering}
+                    className="px-2 py-1 rounded-lg text-xs bg-zinc-800 text-zinc-200 hover:bg-zinc-700 disabled:opacity-40"
+                    title="Restore the last saved project from this browser">Open Project</button>
                   {/* Lyric Offset Controls */}
                   <div className="flex items-center gap-1 bg-zinc-800/50 rounded-lg px-2 py-1 h-9">
                     <span className="text-xs text-zinc-300 w-12 text-center font-mono select-none border-r border-white/10 pr-2 mr-1">
@@ -4031,7 +4080,7 @@ function App() {
                       id="preset-select"
                       aria-label="Visual Preset"
                     >
-                      <option value="custom" className="bg-zinc-900 font-bold text-purple-400">Custom ✨</option>
+                      <option value="custom" className="bg-zinc-900 font-bold text-purple-400">Custom Ã¢Å“Â¨</option>
                       <option value="default" className="bg-zinc-900">Default</option>
                       <option value="large" className="bg-zinc-900">Big Text</option>
                       <option value="large_upper" className="bg-zinc-900">Big Text (UP)</option>
@@ -4425,8 +4474,8 @@ function App() {
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm"><span className="text-zinc-300">Play / Pause</span> <span className="font-mono text-purple-400 bg-white/5 px-2 py-0.5 rounded">Space</span></div>
                     <div className="flex justify-between text-sm"><span className="text-zinc-300">Stop</span> <span className="font-mono text-purple-400 bg-white/5 px-2 py-0.5 rounded">S</span></div>
-                    <div className="flex justify-between text-sm"><span className="text-zinc-300">Rewind 5s</span> <span className="font-mono text-purple-400 bg-white/5 px-2 py-0.5 rounded">←</span></div>
-                    <div className="flex justify-between text-sm"><span className="text-zinc-300">Forward 5s</span> <span className="font-mono text-purple-400 bg-white/5 px-2 py-0.5 rounded">→</span></div>
+                    <div className="flex justify-between text-sm"><span className="text-zinc-300">Rewind 5s</span> <span className="font-mono text-purple-400 bg-white/5 px-2 py-0.5 rounded">Ã¢â€ Â</span></div>
+                    <div className="flex justify-between text-sm"><span className="text-zinc-300">Forward 5s</span> <span className="font-mono text-purple-400 bg-white/5 px-2 py-0.5 rounded">Ã¢â€ â€™</span></div>
                     <div className="flex justify-between text-sm"><span className="text-zinc-300">Repeat Mode</span> <span className="font-mono text-purple-400 bg-white/5 px-2 py-0.5 rounded">R</span></div>
                     <div className="flex justify-between text-sm"><span className="text-zinc-300">Mute</span> <span className="font-mono text-purple-400 bg-white/5 px-2 py-0.5 rounded">M</span></div>
                   </div>
