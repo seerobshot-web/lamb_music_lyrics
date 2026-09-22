@@ -20,6 +20,7 @@ import { useUI } from './contexts/UIContext';
 import { renderWithFFmpeg, renderPlaylistWithFFmpeg, isFFmpegAvailable, getFFmpegCodecs } from './utils/ffmpegRenderer';
 import { renderWithWebCodecs, renderPlaylistWithWebCodecs, isWebCodecsSupported } from './utils/webCodecsRenderer';
 import { extractEmbeddedLyrics } from './utils/embeddedLyrics';
+import LocalAlignmentPanel from './components/LocalAlignmentPanel';
 import { saveSession, loadSession } from './packages/project-engine';
 
 
@@ -3938,7 +3939,12 @@ function App() {
                 </div>
               </div>
 
-              {/* Main Buttons */}
+              <LocalAlignmentPanel audio={currentAudioFile} lyrics={lyrics} onApprove={approved => {
+                    setLyrics(approved);
+                    setPlaylist(previous => previous.map((track, index) => index === currentTrackIndex
+                      ? { ...track, parsedLyrics: approved } : track));
+                  }} />
+                  {/* Main Buttons */}
               <div className="flex flex-wrap lg:grid lg:grid-cols-[1fr_auto_1fr] items-center justify-center gap-4">
                 <div className="flex gap-1 justify-center lg:justify-start flex-wrap order-2 lg:order-none w-auto lg:w-full">
                   <label className="p-2 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white cursor-pointer transition-colors" title="Load Audio or video">
