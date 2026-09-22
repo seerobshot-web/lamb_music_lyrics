@@ -3,7 +3,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { TranscriptionSegment } from "../types";
 
 // function to get AI instance
-const getAI = (apiKey?: string) => new GoogleGenAI({ apiKey: apiKey || process.env.API_KEY || '' });
+const getAI = (apiKey?: string) => { if (!apiKey) throw new Error('AI requires explicit user credentials or an authenticated server adapter'); return new GoogleGenAI({ apiKey }); };
 
 const TRANSCRIPTION_SCHEMA = {
   type: Type.OBJECT,
@@ -268,10 +268,10 @@ export async function transcribeAudio(
     3. WORD-LEVEL DETECTION: Detect the language of every individual word.
     4. NATIVE SCRIPT STRICTNESS: Write EACH word in its native script.
        - Example: "Aku cinta kamu" (Indonesian) -> Latin.
-       - Example: "愛してる" (Japanese) -> Kanji/Kana.
+       - Example: "æ„›ã—ã¦ã‚‹" (Japanese) -> Kanji/Kana.
     5. MIXED SCRIPT PRESERVATION (IMPORTANT):
        - If specific English/Latin words are spoken amidst Japanese/Chinese/etc., KEEP them in LATIN script.
-       - DO NOT transliterate English words into Katakana (e.g. if audio says "I love you", write "I love you", NOT "アイラブユー").
+       - DO NOT transliterate English words into Katakana (e.g. if audio says "I love you", write "I love you", NOT "ã‚¢ã‚¤ãƒ©ãƒ–ãƒ¦ãƒ¼").
        - Maintain mixed text (Kanji/Kana + Latin) exactly as spoken.
     6. PROHIBITIONS:
        - DO NOT translate.
